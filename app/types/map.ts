@@ -5,11 +5,17 @@ export interface SearchResult {
   lon: string;
 }
 
+export interface LocationProperties {
+  links?: string[];
+  notes?: string;
+}
+
 export interface Location {
   id: string;
   lat: number;
   lon: number;
   name: string;
+  properties?: LocationProperties;
 }
 
 export interface MapTilerFeature {

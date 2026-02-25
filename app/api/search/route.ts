@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
   try {
     const response = await fetch(
-      `https://api.maptiler.com/geocoding/${encodeURIComponent(query)}.json?language=vi&proximity=ip&fuzzyMatch=true&limit=5&key=${apiKey}`,
+      `https://api.maptiler.com/geocoding/${query}.json?language=vi&proximity=ip&fuzzyMatch=true&limit=5&key=${apiKey}`,
     );
 
     if (!response.ok) {

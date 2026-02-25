@@ -58,9 +58,7 @@ const SearchPanel = ({ locations, onUpdateLocations }: SearchPanelProps) => {
 
     setLoadingStates((prev) => ({ ...prev, [id]: true }));
     try {
-      const response = await fetch(
-        `/api/search?q=${encodeURIComponent(query)}`,
-      );
+      const response = await fetch(`/api/search?q=${query}`);
       if (!response.ok) throw new Error("Search failed");
       const data: MapTilerResponse = await response.json();
       const transform = data.features.map((item: MapTilerFeature) => ({

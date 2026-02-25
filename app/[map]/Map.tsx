@@ -1,21 +1,32 @@
 "use client";
 
+import { LocationProperties } from "@/app/types/map";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useMemo, useRef } from "react";
-import MapLibre, { MapRef, Marker, Popup } from "react-map-gl/maplibre";
+import { useEffect, useMemo, useRef, useState } from "react";
+import MapLibre, {
+  MapRef,
+  Marker,
+  MarkerEvent,
+  Popup,
+  StyleSpecification,
+} from "react-map-gl/maplibre";
+import LocationPopup from "./LocationPopup";
 import MapRoutes from "./MapRoutes";
 
 interface MarkerData {
+  id: string;
   position: [number, number];
   label?: string;
+  properties?: LocationProperties;
 }
 
 interface MapProps {
   center: [number, number];
   markers: MarkerData[];
+  onUpdateProperties: (id: string, properties: LocationProperties) => void;
 }
 
-const MAP_STYLE = {
+const MAP_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     osm: {
@@ -35,8 +46,9 @@ const MAP_STYLE = {
   ],
 };
 
-function Map({ center, markers }: MapProps) {
+function Map({ center, markers, onUpdateProperties }: MapProps) {
   const mapRef = useRef<MapRef>(null);
+  const [activePopupIds, setActivePopupIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (mapRef.current) {
@@ -57,7 +69,18 @@ function Map({ center, markers }: MapProps) {
     [markers],
   );
 
-  console.log("markers", markers);
+  const handleMarkerClick = (e: MarkerEvent<MouseEvent>, id: string) => {
+    e.originalEvent.stopPropagation();
+    setActivePopupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   return (
     <div style={{ height: "100%", width: "100%" }}>
@@ -68,24 +91,26 @@ function Map({ center, markers }: MapProps) {
           latitude: center[0],
           zoom: 13,
         }}
-        mapStyle={MAP_STYLE as any}
+        mapStyle={MAP_STYLE}
         style={{ width: "100%", height: "100%" }}
+        onClick={() => setActivePopupIds(new Set())}
       >
         <MapRoutes locations={routeLocations} />
 
-        {markers.map((marker, index) => (
-          <div key={index}>
+        {markers.map((marker) => (
+          <div key={marker.id}>
             <Marker
               longitude={marker.position[1]}
               latitude={marker.position[0]}
               anchor="bottom"
+              onClick={(e) => handleMarkerClick(e, marker.id)}
             >
-              <div className="text-red-500 cursor-pointer">
+              <div className="text-red-500 cursor-pointer hover:scale-110 transition-transform drop-shadow-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="w-8 h-8"
+                  className="w-10 h-10"
                 >
                   <path
                     fillRule="evenodd"
@@ -96,7 +121,7 @@ function Map({ center, markers }: MapProps) {
                 </svg>
               </div>
             </Marker>
-            {marker.label && (
+            {activePopupIds.has(marker.id) && (
               <Popup
                 longitude={marker.position[1]}
                 latitude={marker.position[0]}
@@ -104,8 +129,21 @@ function Map({ center, markers }: MapProps) {
                 closeButton={false}
                 closeOnClick={false}
                 offset={10}
+                maxWidth="300px"
+                onClose={() => {
+                  setActivePopupIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(marker.id);
+                    return next;
+                  });
+                }}
               >
-                <div className="text-xs font-semibold p-1">{marker.label}</div>
+                <LocationPopup
+                  id={marker.id}
+                  name={marker.label || "Vị trí"}
+                  properties={marker.properties}
+                  onUpdate={onUpdateProperties}
+                />
               </Popup>
             )}
           </div>
