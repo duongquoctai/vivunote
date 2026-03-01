@@ -162,6 +162,16 @@ function Map({ center, markers, onUpdateProperties }: MapProps) {
 
   const handleMarkerClick = (e: MarkerEvent<MouseEvent>, id: string) => {
     e.originalEvent.stopPropagation();
+
+    const marker = markers.find((m) => m.id === id);
+    if (marker && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [marker.position[1], marker.position[0]],
+        zoom: 15,
+        duration: 1000,
+      });
+    }
+
     setActivePopupIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
