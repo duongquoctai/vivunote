@@ -9,6 +9,7 @@ import { memo, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import Button from "../ui/Button";
+import Drawer from "../ui/Drawer";
 
 interface Journey {
   _id: string;
@@ -57,7 +58,7 @@ const JourneyCard = memo(
       try {
         await onUpdate(journey._id, data.name);
         setIsEditing(false);
-      } catch (error) {
+      } catch {
         // Error handling is inside onUpdate toast
       }
     };
@@ -169,7 +170,6 @@ const JourneyDrawer = ({ isOpen, onClose }: JourneyDrawerProps) => {
 
   const handleUpdateName = async (id: string, newName: string) => {
     try {
-      console.log("---", newName, id);
       const res = await fetch(`/api/journeys/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -189,67 +189,42 @@ const JourneyDrawer = ({ isOpen, onClose }: JourneyDrawerProps) => {
   };
 
   return (
-    <>
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity pointer-events-auto"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Drawer */}
-      <div
-        className={`fixed top-0 right-0 h-full w-80 md:w-96 bg-white dark:bg-zinc-900 shadow-2xl z-60 transform transition-transform duration-300 ease-in-out pointer-events-auto ${isOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
-              <Icon icon="mdi:map-marker-path" className="text-blue-500" />
-              Hành trình của tôi
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              icon="mdi:close"
-              onClick={onClose}
-              className="text-zinc-500"
+    <Drawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Hành trình của tôi"
+      icon="mdi:map-marker-path"
+      iconClassName="bg-blue-50 dark:bg-blue-900/20 text-blue-500"
+    >
+      <div className="space-y-4">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-40 space-y-2">
+            <Icon
+              icon="mdi:loading"
+              className="w-8 h-8 text-blue-500 animate-spin"
             />
+            <p className="text-sm text-zinc-500">Đang tải hành trình...</p>
           </div>
-
-          {/* List */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-40 space-y-2">
-                <Icon
-                  icon="mdi:loading"
-                  className="w-8 h-8 text-blue-500 animate-spin"
-                />
-                <p className="text-sm text-zinc-500">Đang tải hành trình...</p>
-              </div>
-            ) : journeys.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 space-y-2 text-zinc-400">
-                <Icon icon="mdi:map-marker-off" className="w-12 h-12" />
-                <p>Bạn chưa có hành trình nào</p>
-              </div>
-            ) : (
-              journeys.map((journey) => (
-                <JourneyCard
-                  key={journey._id}
-                  journey={journey}
-                  onUpdate={handleUpdateName}
-                  onSelect={(locs, id) => {
-                    router.push(`/map/${id}`);
-                    onClose();
-                  }}
-                />
-              ))
-            )}
+        ) : journeys.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 space-y-2 text-zinc-400">
+            <Icon icon="mdi:map-marker-off" className="w-12 h-12" />
+            <p className="text-sm">Bạn chưa có hành trình nào</p>
           </div>
-        </div>
+        ) : (
+          journeys.map((journey) => (
+            <JourneyCard
+              key={journey._id}
+              journey={journey}
+              onUpdate={handleUpdateName}
+              onSelect={(locs, id) => {
+                router.push(`/map/${id}`);
+                onClose();
+              }}
+            />
+          ))
+        )}
       </div>
-    </>
+    </Drawer>
   );
 };
 

@@ -1,6 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import POIDrawer from "../components/map/POIDrawer";
+import SavedLocationDrawer from "../components/map/SavedLocationDrawer";
 import { useMapContext } from "../context/MapContext";
 
 const MapComponent = dynamic(() => import("./Map"), {
@@ -25,13 +27,17 @@ const MapBackground = () => {
     }));
 
   return (
-    <div className="fixed inset-0 w-full h-full z-0">
-      <MapComponent
-        center={center}
-        markers={markers}
-        onUpdateProperties={updateLocationProperties}
-      />
-    </div>
+    <>
+      <div className="fixed inset-0 w-full h-full z-0">
+        <MapComponent
+          center={center}
+          markers={markers}
+          onUpdateProperties={updateLocationProperties}
+        />
+      </div>
+      <POIDrawer />
+      <SavedLocationDrawer />
+    </>
   );
 };
 

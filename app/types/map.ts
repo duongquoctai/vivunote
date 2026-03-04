@@ -1,8 +1,9 @@
 export interface SearchResult {
   name: string;
   display_name: string;
-  lat: string;
-  lon: string;
+  lat?: string;
+  lon?: string;
+  place_id?: string;
 }
 
 export interface LocationProperties {
@@ -18,16 +19,47 @@ export interface Location {
   properties?: LocationProperties;
 }
 
-export interface MapTilerFeature {
-  id: string;
-  text: string;
-  place_name: string;
-  center: [number, number]; // [lon, lat]
-  text_vi?: string;
-  place_name_vi?: string;
+export interface GoongResult {
+  place_id: string;
+  formatted_address: string;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  name?: string;
 }
 
-export interface MapTilerResponse {
-  type: string;
-  features: MapTilerFeature[];
+export interface GoongResponse {
+  results: GoongResult[];
+  status: string;
+}
+
+export interface GoongAutocompletePrediction {
+  description: string;
+  place_id: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
+
+export interface GoongAutocompleteResponse {
+  predictions: GoongAutocompletePrediction[];
+  status: string;
+}
+
+export interface GoongPlaceDetailResponse {
+  result: {
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
+    name: string;
+    formatted_address: string;
+  };
+  status: string;
 }

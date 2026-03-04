@@ -18,10 +18,12 @@ interface MapContextType {
   center: [number, number];
   journeyName: string;
   clickedPlace: ClickedPlace | null;
+  selectedLocationId: string | null;
   setLocations: (locs: Location[]) => void;
   setCenter: (center: [number, number]) => void;
   setJourneyName: (name: string) => void;
   setClickedPlace: (place: ClickedPlace | null) => void;
+  setSelectedLocationId: (id: string | null) => void;
   updateLocationProperties: (
     id: string,
     properties: LocationProperties,
@@ -35,6 +37,9 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
   const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [journeyName, setJourneyName] = useState<string>("");
   const [clickedPlace, setClickedPlace] = useState<ClickedPlace | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null,
+  );
   const [locations, setLocations] = useState<Location[]>([
     {
       id: "initial",
@@ -65,6 +70,7 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
     setCenter(DEFAULT_CENTER);
     setJourneyName("");
     setClickedPlace(null);
+    setSelectedLocationId(null);
   }, []);
 
   return (
@@ -78,6 +84,8 @@ export const MapProvider = ({ children }: { children: React.ReactNode }) => {
         setCenter,
         setJourneyName,
         setClickedPlace,
+        selectedLocationId,
+        setSelectedLocationId,
         updateLocationProperties,
         resetMap,
       }}

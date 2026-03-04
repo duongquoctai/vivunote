@@ -3,34 +3,38 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
+  const placeId = searchParams.get("place_id");
 
-  if (!query) {
+  if (!query && !placeId) {
     return NextResponse.json(
-      { error: "Query parameter 'q' is required" },
+      { error: "Query parameter 'q' or 'place_id' is required" },
       { status: 400 },
     );
   }
 
-  // Use the key specified by the user, falling back to a more standard name if needed
-  const apiKey =
-    process.env.YOUR_MAPTILER_API_KEY_HERE || process.env.MAPTILER_API_KEY;
+  const apiKey = process.env.GOONG_API_KEY;
 
   if (!apiKey) {
-    console.error("MapTiler API key not set in environment variables");
+    console.error("GOONG_API_KEY not set in environment variables");
     return NextResponse.json(
-      { error: "Search service is not configured" },
+      { error: "Search service (Goong) is not configured" },
       { status: 500 },
     );
   }
 
   try {
-    const response = await fetch(
-      `https://api.maptiler.com/geocoding/${query}.json?language=vi&proximity=ip&fuzzyMatch=true&limit=20q&key=${apiKey}`,
-    );
+    let url = "";
+    if (placeId) {
+      url = `https://rsapi.goong.io/v2/place/detail?place_id=${placeId}&api_key=${apiKey}`;
+    } else {
+      url = `https://rsapi.goong.io/v2/place/autocomplete?input=${encodeURIComponent(query!)}&limit=10&api_key=${apiKey}`;
+    }
+
+    const response = await fetch(url);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("MapTiler Geocoding API error:", errorText);
+      console.error("Goong API error:", errorText);
       return NextResponse.json(
         { error: errorText },
         { status: response.status },
@@ -42,7 +46,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("API error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch data from search API" },
+      { error: "Failed to fetch data from Goong API" },
       { status: 500 },
     );
   }

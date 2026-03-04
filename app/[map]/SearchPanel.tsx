@@ -1,7 +1,8 @@
 import {
+  GoongAutocompletePrediction,
+  GoongAutocompleteResponse,
+  GoongPlaceDetailResponse,
   Location,
-  MapTilerFeature,
-  MapTilerResponse,
   SearchResult,
 } from "@/app/types/map";
 import { Icon } from "@iconify/react";
@@ -13,7 +14,6 @@ import JourneyDrawer from "../components/map/JourneyDrawer";
 import Button from "../components/ui/Button";
 import { useMapContext } from "../context/MapContext";
 import { debounce } from "../utils/helper";
-import PlaceDetails from "./PlaceDetails";
 import SearchInput from "./SearchInput";
 
 interface SearchPanelProps {
@@ -28,7 +28,7 @@ const SearchPanel = ({
   journeyId,
 }: SearchPanelProps) => {
   const router = useRouter();
-  const { journeyName } = useMapContext();
+  const { journeyName, setSelectedLocationId } = useMapContext();
   const [queries, setQueries] = useState<Record<string, string>>({});
   const [activeResults, setActiveResults] = useState<{
     id: string;
@@ -75,13 +75,14 @@ const SearchPanel = ({
     try {
       const response = await fetch(`/api/search?q=${query}`);
       if (!response.ok) throw new Error("Search failed");
-      const data: MapTilerResponse = await response.json();
-      const transform = data.features.map((item: MapTilerFeature) => ({
-        name: item.text_vi || item.text,
-        display_name: item.place_name,
-        lat: item.center[1].toString(),
-        lon: item.center[0].toString(),
-      }));
+      const data: GoongAutocompleteResponse = await response.json();
+      const transform = (data.predictions || []).map(
+        (item: GoongAutocompletePrediction) => ({
+          name: item.structured_formatting.main_text,
+          display_name: item.description,
+          place_id: item.place_id,
+        }),
+      );
       setActiveResults({ id, items: transform });
     } catch (error) {
       console.error("Search error:", error);
@@ -100,23 +101,44 @@ const SearchPanel = ({
     debouncedSearch(id, value);
   };
 
-  const selectLocation = (id: string, result: SearchResult) => {
+  const selectLocation = async (id: string, result: SearchResult) => {
+    let lat = result.lat;
+    let lon = result.lon;
+
+    if (!lat || !lon) {
+      setLoadingStates((prev) => ({ ...prev, [id]: true }));
+      try {
+        const response = await fetch(`/api/search?place_id=${result.place_id}`);
+        if (!response.ok) throw new Error("Failed to fetch place details");
+        const data: GoongPlaceDetailResponse = await response.json();
+        lat = data.result.geometry.location.lat.toString();
+        lon = data.result.geometry.location.lng.toString();
+      } catch (error) {
+        console.error("Details fetch error:", error);
+        toast.error("Không thể lấy thông tin vị trí");
+        setLoadingStates((prev) => ({ ...prev, [id]: false }));
+        return;
+      }
+    }
+
     const newLocations = locations.map((loc) =>
       loc.id === id
         ? {
             ...loc,
-            lat: parseFloat(result.lat),
-            lon: parseFloat(result.lon),
+            lat: parseFloat(lat!),
+            lon: parseFloat(lon!),
             name: result.name || result.display_name,
           }
         : loc,
     );
     onUpdateLocations(newLocations);
     setActiveResults(null);
+    setLoadingStates((prev) => ({ ...prev, [id]: false }));
     setQueries((prev) => ({
       ...prev,
       [id]: result.name || result.display_name,
     }));
+    setSelectedLocationId(id);
   };
 
   const addNewLocation = () => {
@@ -160,6 +182,37 @@ const SearchPanel = ({
       setIsSaving(false);
     }
   };
+
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!isVisible) {
+    return (
+      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-3 pointer-events-none">
+        {journeyName && (
+          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-2xl shadow-xl px-5 py-3 border border-zinc-200 dark:border-zinc-800 flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500 pointer-events-auto max-w-[200px] md:max-w-xs">
+            <div className="p-2 bg-blue-500 rounded-lg shadow-lg shadow-blue-500/20 shrink-0">
+              <Icon icon="mdi:map-marker-path" className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 tracking-wider">
+                Đang xem
+              </p>
+              <h2 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 truncate">
+                {journeyName}
+              </h2>
+            </div>
+          </div>
+        )}
+        <Button
+          variant="secondary"
+          icon="mdi:chevron-left"
+          onClick={() => setIsVisible(true)}
+          className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-xl border border-zinc-200 dark:border-zinc-800 w-12 h-12 rounded-xl pointer-events-auto hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
+          title="Hiện bảng tìm kiếm"
+        />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -210,10 +263,17 @@ const SearchPanel = ({
 
           <div className="flex gap-2 mt-6">
             <Button
+              variant="secondary"
+              icon="mdi:chevron-right"
+              onClick={() => setIsVisible(false)}
+              className="w-12"
+              title="Ẩn bảng tìm kiếm"
+            />
+            <Button
+              className="flex-1"
               variant="outline"
               icon="mdi:plus"
               onClick={addNewLocation}
-              className="flex-1"
             >
               Thêm
             </Button>
@@ -252,8 +312,6 @@ const SearchPanel = ({
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
       />
-
-      <PlaceDetails />
     </>
   );
 };
